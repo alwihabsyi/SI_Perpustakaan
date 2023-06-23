@@ -4,10 +4,14 @@ import IconUbah from "@/assets/IconUbah";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { db } from "@/config/firebase";
-import { collection, doc, getDocs, deleteDoc } from "firebase/firestore";
+import { 
+  collection, doc, getDocs, deleteDoc,
+  query, orderBy
+} from "firebase/firestore";
 
 export default function Home() {
   const [buku, setBuku] = useState([]);
+  const [search, setSearch] = useState([]);
   const router = useRouter();
 
   const addBookHandler = () => {
@@ -19,9 +23,10 @@ export default function Home() {
   };
 
   const bukuCollectionRef = collection(db, "buku");
+  const sortData = query(bukuCollectionRef, orderBy("tahun_terbit", "desc"));
   const getBukuList = async() => {
     try {
-      const data = await getDocs(bukuCollectionRef);
+      const data = await getDocs(sortData);
       const filteredData = data.docs.map((doc) => ({
         ... doc.data(),
         id: doc.id,
@@ -51,9 +56,21 @@ export default function Home() {
           <div className="mt-10 mb-4">
             <h3 className="text-xl font-semibold">Data Buku Perpustakaan</h3>
           </div>
-          <button onClick={addBookHandler} className="bg-sky-500 px-3 py-1 text-white rounded-md hover:bg-sky-700">
-            Tambah Buku
-          </button>
+
+          <div className="flex items-center justify-between">
+            <button onClick={addBookHandler} className="bg-sky-500 px-3 py-1 text-white rounded-md hover:bg-sky-700">
+              Tambah Buku
+            </button>
+
+            <div className="flex items-center justify-end">
+              <input 
+                type="text"
+                className="w-42 mt-2 block rounded-xl border px-3 py-2"
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="ketik nama buku"
+              />
+            </div>
+          </div>
           {/* tabel */}
           <div className="mt-5">
             <table className="bg-sky-50 py-10 rounded-xl table-auto">
@@ -67,7 +84,9 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {buku.map((data) => (
+                {buku.length >= 1 ? (buku
+                .filter((data) => data.nama_buku ?.toLowerCase().includes(search))
+                .map((data) => (
                   <tr className="hover:bg-sky-200" key={data.id}>
                     <td className="px-6 py-2">{data.nama_buku}</td>
                     <td className="px-6 py-2">{data.pengarang}</td>
@@ -78,7 +97,15 @@ export default function Home() {
                       <span onClick={() => {deleteBuku(data.id);}} className="cursor-pointer h-7 w-7 hover:text-red-500"><IconDelete /></span>
                     </td>
                   </tr>
-                ))}
+                ))
+                ) : (
+                  <tr>
+                    <td className="py-5 text-center" colSpan={6}>
+                      Belum ada data buku!
+                    </td>
+                  </tr>
+                )
+              }
               </tbody>
             </table>
           </div>
